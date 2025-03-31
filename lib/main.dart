@@ -1,3 +1,4 @@
+import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_screen.dart';
 import 'package:capstone_mobile_app/src/config/presentations/home_screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +29,7 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
-        return const HomeScreen(
-          title: "Home Screen",
-        );
+        return const SignInScreen();
       },
     ),
   ],
