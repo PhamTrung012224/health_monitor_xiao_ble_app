@@ -1,80 +1,259 @@
+import 'package:capstone_mobile_app/src/config/components/ui_icon.dart';
+import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
+import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_event.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
+import '../../constants/constants.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.title});
   final String title;
+  const HomeScreen({super.key, required this.title});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _counter = 0;
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
+  BuildContext? _context;
+  ColorScheme? _colorScheme;
+  // bool isDarkMode = false;
+  bool _isLoadingLogOut = false;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void didChangeDependencies() {
+    // isDarkMode = (Theme.of(context).brightness == Brightness.dark);
+    _context = context;
+    _colorScheme = Theme.of(context).colorScheme;
+    super.didChangeDependencies();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    super.build(context);
+    return Stack(
+      children: [
+        Container(
+          height: double.infinity,
+          width: double.infinity,
+          color: _colorScheme!.background,
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                toolbarHeight: 70,
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const UIIcon(
+                        size: 32,
+                        icon: IconConstants.bluetoothIcon,
+                        color: Colors.black),
+                    GestureDetector(
+                        onTap: () async {
+                          setState(() {
+                            _isLoadingLogOut = true;
+                          });
+                          _context!.read<SignInBloc>().add(SignOutRequired());
+                          setState(() {
+                            _isLoadingLogOut = false;
+                          });
+                        },
+                        child: const UIIcon(
+                            size: 32,
+                            icon: IconConstants.logoutIcon,
+                            color: Colors.black)),
+                  ],
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(24),
+                  child: Center(
+                      child: Text(
+                    "IMU Data Dashboard",
+                    style: TextStyleConstants.tabBarTitle,
+                  )),
+                ),
+                pinned: true,
+                backgroundColor: _colorScheme!.tertiaryContainer,
+                expandedHeight: MediaQuery.of(context).size.height * 0.24,
+                flexibleSpace: const FlexibleSpaceBar(),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          height: MediaQuery.of(context).size.height * 0.18,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(16)),
+                              color: _colorScheme!.primaryContainer),
+                          margin: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Accelerate",
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: _colorScheme!.onPrimaryContainer),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'x: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                    Text(
+                                      'y: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                    Text(
+                                      'z: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          height: MediaQuery.of(context).size.height * 0.18,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(16)),
+                              color: _colorScheme!.primaryContainer),
+                          margin: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Gyroscope",
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: _colorScheme!.onPrimaryContainer),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'x: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                    Text(
+                                      'y: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                    Text(
+                                      'z: ?.????',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _colorScheme!.onPrimaryContainer),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Direct use of ListView with shrinkWrap
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 10,
+                          padding: EdgeInsets.zero,
+                          // Constrain the ListView within the column
+                          itemBuilder: (context, idx) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.all(
+                                      Radius.circular(16)),
+                                  color: _colorScheme!.primaryContainer),
+                              height: MediaQuery.of(context).size.height * 0.18,
+                              margin:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+        _isLoadingLogOut
+            ? Center(
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                    color: _colorScheme!.primary, size: 90),
+              )
+            : const SizedBox()
+      ],
     );
   }
+
+  @override
+  void dispose() {
+    _context = null;
+    super.dispose();
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }

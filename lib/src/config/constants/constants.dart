@@ -10,7 +10,7 @@ class TextStyleConstants {
   static final TextStyle tabBarTitle = TextStyle(
       fontFamily: GoogleFonts.poppins().fontFamily,
       fontWeight: FontWeight.w700,
-      fontSize: 26);
+      fontSize: 24);
 
   static final TextStyle title = TextStyle(
       fontFamily: GoogleFonts.poppins().fontFamily,
@@ -88,37 +88,26 @@ class TextStyleConstants {
 }
 
 class ImageConstants {
-  static const String onBoardingBackground =
-      'assets/images/onBoardingBackground.jpg';
-  static const String loginBackground = 'assets/images/loginBackground1.jpg';
-  static const String loginDarkBackground =
-      'assets/images/loginBackground3.jpg';
-  static const String recipeBackground = 'assets/images/recipeBackground.jpg';
-  static const String recipeDarkBackground =
-      'assets/images/recipeDarkBackground.jpg';
+  // static const String onBoardingBackground =
+  //     'assets/images/onBoardingBackground.jpg';
+  // static const String loginBackground = 'assets/images/loginBackground1.jpg';
+  // static const String loginDarkBackground =
+  //     'assets/images/loginBackground3.jpg';
+  // static const String recipeBackground = 'assets/images/recipeBackground.jpg';
+  // static const String recipeDarkBackground =
+  //     'assets/images/recipeDarkBackground.jpg';
 }
 
 class IconConstants {
   //Icon path
-  static const String caloriesIcon = 'assets/icons/calories.svg';
-  static const String chefHatIcon = 'assets/icons/chef_hat.svg';
-  static const String clockIcon = 'assets/icons/clock.svg';
-  static const String allergensIcon = 'assets/icons/allergens.svg';
-  static const String ingredientsIcon = 'assets/icons/ingredients.svg';
+  static const String bluetoothIcon = 'assets/icons/bluetooth.svg';
   static const String instructionsIcon = 'assets/icons/instructions.svg';
-  static const String nutritionIcon = 'assets/icons/nutrition.svg';
-  static const String servingsIcon = 'assets/icons/servings.svg';
   static const String logoutIcon = 'assets/icons/logout.svg';
   static const String accountIcon = 'assets/icons/account.svg';
   static const String accountBoxIcon = 'assets/icons/account_box.svg';
   static const String usernameIcon = 'assets/icons/username.svg';
   static const String upIcon = 'assets/icons/expand_circle_up.svg';
   static const String downIcon = 'assets/icons/expand_circle_down.svg';
-  static const String youtubeIcon = 'assets/icons/youtube.svg';
-  static const String mealIcon = 'assets/icons/meal.svg';
-  static const String unsavedRecipeIcon = 'assets/icons/unsavedRecipe.svg';
-  static const String savedRecipeIcon = 'assets/icons/savedRecipe.svg';
-  static const String recipeSavingScreenIcon = 'assets/icons/recipe.svg';
   static const String themeIcon = 'assets/icons/theme.svg';
 
   //Icon Data
@@ -130,52 +119,14 @@ class IconConstants {
 }
 
 class LottieConstants {
-  static const String cookingAnimation = 'assets/lottie/cooking_animation.json';
-  static const String noRecipeAnimation =
-      'assets/lottie/noRecipe_animation.json';
-  static const String makeRecipeAnimation = 'assets/lottie/food_animation.json';
+  // static const String cookingAnimation = 'assets/lottie/cooking_animation.json';
+  // static const String noRecipeAnimation =
+  //     'assets/lottie/noRecipe_animation.json';
+  // static const String makeRecipeAnimation = 'assets/lottie/food_animation.json';
 }
 
 class Constants {
   static const BorderRadius borderRadius = BorderRadius.all(Radius.circular(4));
-  static const List<String> extraBadWords = [
-    'json',
-    'result',
-    'results',
-    'put',
-    'enter',
-    'remove',
-    'add',
-    'give',
-    'put',
-    'entered',
-    'removed',
-    'added',
-    'given',
-    'nothing',
-    'empty',
-    "'",
-    '"',
-    '[',
-    ']',
-    '{',
-    '}',
-    '(',
-    ')',
-    '<',
-    '>',
-    '~',
-    '!',
-    '@',
-    '#',
-    '%',
-    '*',
-    '+',
-    '-',
-    '=',
-    '^',
-    '&'
-  ];
   static const String rejectNameString =
       r'^[A-Za-z0-9](?!.*\s{2})[A-Za-z0-9\s]{0,23}[A-Za-z0-9]$';
   static const String rejectEmailString =
