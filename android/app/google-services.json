@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "799636338728",
+    "project_id": "health-care-app-ac9f4",
+    "storage_bucket": "health-care-app-ac9f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799636338728:android:666d2068b61ff53db95d1d",
+        "android_client_info": {
+          "package_name": "com.example.capstone_mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1vYTcANBrOcqjnvO7OZymMZ0fIHzMNgo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
