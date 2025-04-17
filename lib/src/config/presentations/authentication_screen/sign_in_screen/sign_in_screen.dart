@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '../../../components/custom_textfield.dart';
-import '../../../components/my_button.dart';
 import '../../../components/square_tile.dart';
 import '../../../components/ui_space.dart';
 import '../../../constants/constants.dart';

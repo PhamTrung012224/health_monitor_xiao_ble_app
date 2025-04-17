@@ -2,6 +2,8 @@ import 'package:capstone_mobile_app/src/config/presentations/authentication_scre
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/authentication_bloc/authentication_state.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_screen.dart';
+import 'package:capstone_mobile_app/src/config/presentations/ble_screen/ble_screen.dart';
+import 'package:capstone_mobile_app/src/config/presentations/ble_screen/bloc/ble_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/home_screen/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -50,6 +52,7 @@ class MyApp extends StatelessWidget {
                 userRepository:
                     context.read<AuthenticationBloc>().userRepository),
           ),
+          BlocProvider<BleBloc>(create: (context) => BleBloc()),
           // BlocProvider<UpdateUserProfileBloc>(
           //   create: (context) => UpdateUserProfileBloc(
           //       userRepository:
@@ -93,6 +96,12 @@ final GoRouter _router = GoRouter(
       path: '/home',
       builder: (BuildContext context, GoRouterState state) {
         return const HomeScreen(title: "Welcome Trung");
+      },
+    ),
+    GoRoute(
+      path: '/ble',
+      builder: (BuildContext context, GoRouterState state) {
+        return const BleScreen();
       },
     )
   ],

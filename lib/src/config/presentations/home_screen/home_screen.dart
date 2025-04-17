@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:capstone_mobile_app/src/config/components/ui_icon.dart';
+import 'package:capstone_mobile_app/src/config/components/ui_space.dart';
+import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_event.dart';
 import 'package:flutter/cupertino.dart';
@@ -8,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '../../constants/constants.dart';
+import '../ble_screen/ble_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -23,6 +28,22 @@ class _HomeScreenState extends State<HomeScreen>
   ColorScheme? _colorScheme;
   // bool isDarkMode = false;
   bool _isLoadingLogOut = false;
+  // Add to maintain subscription
+  StreamSubscription<IMUData>? _dataSubscription;
+  // Add IMU data variable
+  IMUData _imuData = IMUData();
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to IMU data updates
+    _dataSubscription = BleDataService().imuDataStream.listen((data) {
+      print("HomeScreen: Received IMU data: ${data.accX}, ${data.accY}, ${data.accZ}"); // Debug print
+      setState(() {
+        _imuData = data;
+      });
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -50,10 +71,19 @@ class _HomeScreenState extends State<HomeScreen>
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const UIIcon(
-                        size: 32,
-                        icon: IconConstants.bluetoothIcon,
-                        color: Colors.black),
+                    GestureDetector(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const BleScreen(),
+                          ),
+                        );
+                      },
+                      child: const UIIcon(
+                          size: 32,
+                          icon: IconConstants.bluetoothIcon,
+                          color: Colors.black),
+                    ),
                     GestureDetector(
                         onTap: () async {
                           setState(() {
@@ -115,23 +145,25 @@ class _HomeScreenState extends State<HomeScreen>
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'x: ?.????',
+                                      'x: ${_imuData.accX.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'y: ?.????',
+                                      'y: ${_imuData.accY.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'z: ?.????',
+                                      'z: ${_imuData.accZ.toStringAsFixed(4)}',
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
@@ -169,23 +201,25 @@ class _HomeScreenState extends State<HomeScreen>
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'x: ?.????',
+                                      'x: ${_imuData.gyroX.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'y: ?.????',
+                                      'y: ${_imuData.gyroY.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'z: ?.????',
+                                      'z: ${_imuData.gyroZ.toStringAsFixed(4)}',
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
@@ -250,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _dataSubscription?.cancel();
     _context = null;
     super.dispose();
   }
