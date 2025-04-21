@@ -1,22 +1,21 @@
-// ble_bloc.dart
 import 'dart:async';
 import 'dart:io';
-import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
-import 'package:capstone_mobile_app/src/config/models/services/ble_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'ble_event.dart';
 import 'ble_state.dart';
+import 'package:capstone_mobile_app/src/config/models/services/ble_service.dart';
+import 'package:capstone_mobile_app/src/config/models/objects/ble_object.dart';
 
-class BleBloc extends Bloc<BleEvent, BleState> {
-  final BleService _bleService = BleService(); // Use the singleton instance
+class BleBloc extends Bloc<BleEvent, BleAppState> {
+  final BleService _bleService = BleService();
   StreamSubscription<List<double>>? _dataSubscription;
   StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
+  StreamSubscription<BluetoothConnectionState>? _deviceConnectionSubscription;
 
-  BleBloc() : super(BleInitial()) {
-    // First register all the event handlers
+  BleBloc() : super(const BleAppState()) {
     on<BleInit>(_onBleInit);
     on<AdapterStateChanged>(_onAdapterStateChanged);
     on<StartScanRequested>(_onStartScanRequested);
@@ -25,223 +24,249 @@ class BleBloc extends Bloc<BleEvent, BleState> {
     on<ConnectRequested>(_onConnectRequested);
     on<DisconnectRequested>(_onDisconnectRequested);
     on<DataReceived>(_onDataReceived);
-
-    // Then add initial event
+    on<BleError>(_onBleError);
     add(BleInit());
   }
 
-  Future<void> _onBleInit(BleInit event, Emitter<BleState> emit) async {
+  Future<void> _onBleInit(BleInit event, Emitter<BleAppState> emit) async {
+    if (kDebugMode) {
+      print('BleBloc: Initializing...');
+    }
+
+    // Sync with BleService
+    final connectedDevice = _bleService.getConnectedDevice();
+    emit(state.copyWith(
+      selectedDevice: connectedDevice,
+      isConnected: connectedDevice != null,
+    ));
+
     // Set up adapter state listener
     _adapterStateSubscription?.cancel();
-    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
-      add(AdapterStateChanged(state));
+    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((adapterState) {
+      if (kDebugMode) {
+        print('BleBloc: Adapter state changed to $adapterState');
+      }
+      add(AdapterStateChanged(adapterState));
     });
 
     // Set up data stream listener
     _dataSubscription?.cancel();
     _dataSubscription = _bleService.dataStream.listen(
-      (data) => add(DataReceived(data)),
-      onError: (error) => add(BleError(error.toString())),
+          (data) {
+        if (kDebugMode) {
+          print('BleBloc: Received data: $data');
+        }
+        add(DataReceived(data));
+      },
+      onError: (error) {
+        if (kDebugMode) {
+          print('BleBloc: Data stream error: $error');
+        }
+        add(BleError(error.toString()));
+      },
     );
 
-    // Check current Bluetooth state
+    // Check current Bluetooth adapter state
     try {
       final currentState = await FlutterBluePlus.adapterState.first;
-      emit(BluetoothStateChange(currentState));
+      if (kDebugMode) {
+        print('BleBloc: Initial adapter state: $currentState');
+      }
+      emit(state.copyWith(adapterState: currentState));
     } catch (e) {
       if (kDebugMode) {
-        print("Error getting initial Bluetooth state: $e");
+        print('BleBloc: Error getting initial Bluetooth state: $e');
+      }
+      emit(state.copyWith(errorMessage: 'Failed to initialize Bluetooth: $e'));
+    }
+
+    // Set up connection listener if a device is connected
+    if (connectedDevice != null) {
+      _setupDeviceConnectionListener(connectedDevice);
+    }
+  }
+
+  void _onAdapterStateChanged(AdapterStateChanged event, Emitter<BleAppState> emit) {
+    if (kDebugMode) {
+      print('BleBloc: Emitting adapter state: ${event.state}');
+    }
+    emit(state.copyWith(adapterState: event.state));
+  }
+
+  Future<void> _onStartScanRequested(StartScanRequested event, Emitter<BleAppState> emit) async {
+    if (kDebugMode) {
+      print('BleBloc: Starting scan...');
+    }
+
+    // Check Bluetooth state
+    final adapterState = await FlutterBluePlus.adapterState.first;
+    if (adapterState != BluetoothAdapterState.on) {
+      if (kDebugMode) {
+        print('BleBloc: Bluetooth is off, requesting to turn on');
+      }
+      try {
+        await FlutterBluePlus.turnOn();
+        // Wait briefly to ensure Bluetooth is enabled
+        await Future.delayed(const Duration(seconds: 1));
+        final newState = await FlutterBluePlus.adapterState.first;
+        if (newState != BluetoothAdapterState.on) {
+          if (kDebugMode) {
+            print('BleBloc: Bluetooth still off after request');
+          }
+          emit(state.copyWith(errorMessage: 'Please enable Bluetooth to scan for devices.'));
+          return;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('BleBloc: Failed to turn on Bluetooth: $e');
+        }
+        emit(state.copyWith(errorMessage: 'Failed to enable Bluetooth: $e'));
+        return;
       }
     }
-  }
 
-  void _onAdapterStateChanged(
-      AdapterStateChanged event, Emitter<BleState> emit) {
-    emit(BluetoothStateChange(event.state));
-  }
-
-  Future<void> _onStartScanRequested(
-      StartScanRequested event, Emitter<BleState> emit) async {
+    // Check and request permissions
     if (!await _checkAndRequestPermissions()) {
-      emit(const BleErrorState("Required permissions are not granted"));
+      if (kDebugMode) {
+        print('BleBloc: Permissions not granted');
+      }
+      emit(state.copyWith(errorMessage: 'Please grant Bluetooth and location permissions.'));
       return;
     }
-    if (kDebugMode) {
-      print("Starting BLE scan...");
-    }
 
-    emit(BleScanning());
+    emit(state.copyWith(isScanning: true, scanResults: [], errorMessage: null));
 
-    // Add subscription to scan results for immediate feedback
     StreamSubscription<List<ScanResult>>? scanResultsSubscription;
     scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
       if (kDebugMode) {
-        print("Scan results (${results.length} devices):");
-        for (var result in results) {
-          print(" - ${result.device.platformName} (${result.device.remoteId})");
-        }
+        print('BleBloc: Scan results updated: ${results.length} devices');
       }
+      emit(state.copyWith(scanResults: results));
     });
 
     try {
-      // Check Bluetooth state before scanning
-      final adapterState = await FlutterBluePlus.adapterState.first;
-      if (adapterState != BluetoothAdapterState.on) {
-        if (kDebugMode) {
-          print("Bluetooth is not on: $adapterState");
-        }
-        emit(BleErrorState("Bluetooth is not enabled"));
-        scanResultsSubscription.cancel();
-        return;
-      }
-
-      // Start scan with longer timeout
-      await _bleService.startScan(timeout: const Duration(seconds: 15));
-
-      // Wait for scan to complete
-      await FlutterBluePlus.isScanning
-          .where((isScanning) => isScanning == false)
-          .first
-          .timeout(const Duration(seconds: 20));
-
+      // Start scan with 5-second timeout
+      await _bleService.startScan(timeout: const Duration(seconds: 5));
+      await FlutterBluePlus.isScanning.where((isScanning) => !isScanning).first;
       if (kDebugMode) {
-        print("Scan completed normally");
+        print('BleBloc: Scan completed');
       }
-      emit(BleScanCompleted(await FlutterBluePlus.scanResults.first));
+      emit(state.copyWith(isScanning: false));
     } catch (e) {
       if (kDebugMode) {
-        print("Scan error or timeout: $e");
+        print('BleBloc: Scan failed: $e');
       }
-      // Try to get scan results even after timeout
-      final results = await FlutterBluePlus.scanResults.first;
-      if (results.isNotEmpty) {
-        if (kDebugMode) {
-          print("Found ${results.length} devices despite timeout");
-        }
-        emit(BleScanCompleted(results));
-      } else {
-        emit(BleErrorState("No devices found: $e"));
-      }
-
-      // Ensure scan is stopped if we hit timeout
-      try {
-        await _bleService.stopScan();
-      } catch (stopError) {
-        print("Error stopping scan: $stopError");
-      }
-    } finally {
+      emit(state.copyWith(errorMessage: 'Scan failed: $e', isScanning: false));
       scanResultsSubscription?.cancel();
     }
   }
 
-  Future<void> _onStopScanRequested(
-      StopScanRequested event, Emitter<BleState> emit) async {
-    try {
-      await _bleService.stopScan();
-      emit(BleScanStopped());
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error stopping scan: $e");
-      }
-      emit(BleErrorState(e.toString()));
+  Future<void> _onStopScanRequested(StopScanRequested event, Emitter<BleAppState> emit) async {
+    if (kDebugMode) {
+      print('BleBloc: Stopping scan...');
     }
+    await _bleService.stopScan();
+    emit(state.copyWith(isScanning: false));
   }
 
-  Future<void> _onDeviceSelected(
-      DeviceSelected event, Emitter<BleState> emit) async {
-    emit(DeviceSelectedState(event.device));
+  void _onDeviceSelected(DeviceSelected event, Emitter<BleAppState> emit) {
+    if (kDebugMode) {
+      print('BleBloc: Device selected: ${event.device.platformName}');
+    }
+    emit(state.copyWith(selectedDevice: event.device, errorMessage: null));
   }
 
-  Future<void> _onConnectRequested(
-      ConnectRequested event, Emitter<BleState> emit) async {
-    emit(BleConnecting());
+  Future<void> _onConnectRequested(ConnectRequested event, Emitter<BleAppState> emit) async {
+    if (kDebugMode) {
+      print('BleBloc: Connecting to ${event.device.platformName}...');
+    }
+    emit(state.copyWith(isConnected: false, errorMessage: null));
     try {
       await _bleService.connectToDevice(event.device);
-      emit(BleConnected(event.device));
+      if (kDebugMode) {
+        print('BleBloc: Connected to ${event.device.platformName}');
+      }
+      emit(state.copyWith(
+          selectedDevice: event.device, isConnected: true, errorMessage: null));
+      _setupDeviceConnectionListener(event.device);
     } catch (e) {
       if (kDebugMode) {
-        print("Error connecting to device: $e");
+        print('BleBloc: Connection failed: $e');
       }
-      emit(BleErrorState(e.toString()));
+      emit(state.copyWith(
+          errorMessage: 'Connection failed: $e', isConnected: false));
     }
   }
 
-  Future<void> _onDisconnectRequested(
-      DisconnectRequested event, Emitter<BleState> emit) async {
-    try {
-      await _bleService.disconnectDevice();
-      emit(BleDisconnected());
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error disconnecting device: $e");
-      }
-      emit(BleErrorState(e.toString()));
-    }
-  }
-
-  void _onDataReceived(DataReceived event, Emitter<BleState> emit) {
-    try {
-      List<double> doubleValues = event.data;
-
-      if (kDebugMode) {
-        print("BleBloc received data: ${doubleValues.join(', ')}");
-      }
-
-      // Update the BLE data service
-      BleDataService().updateIMUData(doubleValues);
-
-      // Emit new state with data
-      emit(BleDataAvailable(event.data));
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error processing received data: $e");
-      }
-      emit(BleErrorState(e.toString()));
-    }
-  }
-
-  // Add this method to your BleBloc
-  Future<bool> _checkAndRequestPermissions() async {
+  Future<void> _onDisconnectRequested(DisconnectRequested event, Emitter<BleAppState> emit) async {
     if (kDebugMode) {
-      print("Checking BLE permissions...");
+      print('BleBloc: Disconnecting device...');
     }
+    await _bleService.disconnectDevice();
+    if (kDebugMode) {
+      print('BleBloc: Device disconnected');
+    }
+    emit(state.copyWith(isConnected: false, errorMessage: null));
+    _deviceConnectionSubscription?.cancel();
+  }
 
-    // For Android 12+ we need these permissions
-    if (Platform.isAndroid) {
-      bool bleScanGranted = false;
-      bool bleConnectGranted = false;
-      bool locationGranted = false;
+  void _onDataReceived(DataReceived event, Emitter<BleAppState> emit) {
+    if (kDebugMode) {
+      print('BleBloc: Processing received data: ${event.data}');
+    }
+    String formattedData = event.data.map((val) => val.toStringAsFixed(2)).join(' | ');
+    Message newMessage = Message(formattedData, 0);
+    List<Message> newBuffer = List.from(state.buffer)..add(newMessage);
+    if (newBuffer.length > 50) {
+      newBuffer = newBuffer.sublist(newBuffer.length - 50);
+    }
+    emit(state.copyWith(buffer: newBuffer, errorMessage: null));
+  }
 
-      try {
-        bleScanGranted = await Permission.bluetoothScan.request().isGranted;
-        bleConnectGranted =
-            await Permission.bluetoothConnect.request().isGranted;
-        locationGranted = await Permission.location.request().isGranted;
+  void _onBleError(BleError event, Emitter<BleAppState> emit) {
+    if (kDebugMode) {
+      print('BleBloc: Error occurred: ${event.message}');
+    }
+    emit(state.copyWith(errorMessage: event.message));
+  }
 
-        if (kDebugMode) {
-          print(
-              "Permissions status: Scan=$bleScanGranted, Connect=$bleConnectGranted, Location=$locationGranted");
-        }
-
-        return bleScanGranted && bleConnectGranted && locationGranted;
-      } catch (e) {
-        if (kDebugMode) {
-          print("Error requesting permissions: $e");
-        }
-        return false;
+  void _setupDeviceConnectionListener(BluetoothDevice device) {
+    if (kDebugMode) {
+      print('BleBloc: Setting up connection listener for ${device.platformName}');
+    }
+    _deviceConnectionSubscription?.cancel();
+    _deviceConnectionSubscription = device.connectionState.listen((connectionState) {
+      if (kDebugMode) {
+        print('BleBloc: Device connection state changed to $connectionState');
       }
+      if (connectionState == BluetoothConnectionState.disconnected) {
+        add(DisconnectRequested());
+      }
+    });
+  }
+
+  Future<bool> _checkAndRequestPermissions() async {
+    if (Platform.isAndroid) {
+      bool bleScanGranted = await Permission.bluetoothScan.request().isGranted;
+      bool bleConnectGranted = await Permission.bluetoothConnect.request().isGranted;
+      bool locationGranted = await Permission.location.request().isGranted;
+      if (kDebugMode) {
+        print('BleBloc: Permissions - Scan: $bleScanGranted, Connect: $bleConnectGranted, Location: $locationGranted');
+      }
+      return bleScanGranted && bleConnectGranted && locationGranted;
     }
 
-    return true; // iOS has different permission model
+    return true;
   }
 
   @override
   Future<void> close() {
     if (kDebugMode) {
-      print("Closing BleBloc and cleaning up resources");
+      print('BleBloc: Closing and cleaning up...');
     }
     _dataSubscription?.cancel();
     _adapterStateSubscription?.cancel();
+    _deviceConnectionSubscription?.cancel();
     return super.close();
   }
 }

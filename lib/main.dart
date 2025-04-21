@@ -84,12 +84,12 @@ final GoRouter _router = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         return BlocBuilder<AuthenticationBloc, AuthenticationState>(
             builder: (context, state) {
-              if (state.status == AuthenticationStatus.authenticated) {
-                return const HomeScreen(title: "Welcome Trung");
-              } else {
-                return const SignInScreen();
-              }
-            });
+          if (state.status == AuthenticationStatus.authenticated) {
+            return const HomeScreen(title: "Welcome Trung");
+          } else {
+            return const SignInScreen();
+          }
+        });
       },
     ),
     GoRoute(
@@ -100,9 +100,13 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/ble',
+      builder: (context, state) => const BleScreen(),
+    ),
+    GoRoute(
+      path: '/select_device',
       builder: (BuildContext context, GoRouterState state) {
-        return const BleScreen();
+        return const SelectBluetoothDevice();
       },
-    )
+    ),
   ],
 );

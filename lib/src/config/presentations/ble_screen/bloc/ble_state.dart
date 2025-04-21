@@ -1,71 +1,61 @@
 // ble_state.dart
+import 'package:capstone_mobile_app/src/config/models/objects/ble_object.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 abstract class BleState extends Equatable {
   const BleState();
-
   @override
   List<Object?> get props => [];
 }
 
-class BleInitial extends BleState {}
+class BleAppState extends BleState {
+  final BluetoothDevice? selectedDevice;
+  final bool isConnected;
+  final List<Message> buffer;
+  final BluetoothAdapterState adapterState;
+  final String? errorMessage;
+  final bool isScanning;
+  final List<ScanResult> scanResults;
 
-class BleScanning extends BleState {}
+  const BleAppState({
+    this.selectedDevice,
+    this.isConnected = false,
+    this.buffer = const [],
+    this.adapterState = BluetoothAdapterState.unknown,
+    this.errorMessage,
+    this.isScanning = false,
+    this.scanResults = const [],
+  });
 
-class BleScanStopped extends BleState {}
-
-class DeviceSelectedState extends BleState {
-  final BluetoothDevice device;
-
-  const DeviceSelectedState(this.device);
-
-  @override
-  List<Object?> get props => [device];
-}
-
-class BleConnecting extends BleState {}
-
-class BleConnected extends BleState {
-  final BluetoothDevice device;
-
-  const BleConnected(this.device);
-
-  @override
-  List<Object?> get props => [device];
-}
-
-class BleDisconnected extends BleState {}
-
-class BleDataAvailable extends BleState {
-  final List<double> data;
-
-  const BleDataAvailable(this.data);
-
-  @override
-  List<Object?> get props => [data];
-}
-
-class BleErrorState extends BleState {
-  final String message;
-
-  const BleErrorState(this.message);
+  BleAppState copyWith({
+    BluetoothDevice? selectedDevice,
+    bool? isConnected,
+    List<Message>? buffer,
+    BluetoothAdapterState? adapterState,
+    String? errorMessage,
+    bool? isScanning,
+    List<ScanResult>? scanResults,
+  }) {
+    return BleAppState(
+      selectedDevice: selectedDevice ?? this.selectedDevice,
+      isConnected: isConnected ?? this.isConnected,
+      buffer: buffer ?? this.buffer,
+      adapterState: adapterState ?? this.adapterState,
+      errorMessage: errorMessage ?? this.errorMessage,
+      isScanning: isScanning ?? this.isScanning,
+      scanResults: scanResults ?? this.scanResults,
+    );
+  }
 
   @override
-  List<Object?> get props => [message];
-}
-class BluetoothStateChange extends BleState{
-  final BluetoothAdapterState state;
-  const BluetoothStateChange(this.state);
-  @override
-  List<Object?> get props => [state];
-}
-
-class BleScanCompleted extends BleState {
-  final List<ScanResult> results;
-  
-  BleScanCompleted(this.results);
-  
-  @override
-  List<Object?> get props => [results];
+  List<Object?> get props => [
+        selectedDevice,
+        isConnected,
+        buffer,
+        adapterState,
+        errorMessage,
+        isScanning,
+        scanResults,
+      ];
 }

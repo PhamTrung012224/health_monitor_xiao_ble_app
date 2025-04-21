@@ -1,14 +1,15 @@
 import 'dart:async';
 
 import 'package:capstone_mobile_app/src/config/components/ui_icon.dart';
-import 'package:capstone_mobile_app/src/config/components/ui_space.dart';
 import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_event.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '../../constants/constants.dart';
@@ -36,21 +37,28 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    // Listen to IMU data updates
-    _dataSubscription = BleDataService().imuDataStream.listen((data) {
-      print("HomeScreen: Received IMU data: ${data.accX}, ${data.accY}, ${data.accZ}"); // Debug print
-      setState(() {
-        _imuData = data;
-      });
-    });
+    _context = context;
+    _setupDataSubscription();
   }
 
   @override
   void didChangeDependencies() {
     // isDarkMode = (Theme.of(context).brightness == Brightness.dark);
-    _context = context;
     _colorScheme = Theme.of(context).colorScheme;
     super.didChangeDependencies();
+  }
+
+  void _setupDataSubscription() {
+    _dataSubscription?.cancel();
+
+    // Create a new subscription
+    _dataSubscription = BleDataService().imuDataStream.listen((data) {
+      if (mounted) {
+        setState(() {
+          _imuData = data;
+        });
+      }
+    });
   }
 
   @override
@@ -73,11 +81,7 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     GestureDetector(
                       onTap: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const BleScreen(),
-                          ),
-                        );
+                        context.go('/ble');
                       },
                       child: const UIIcon(
                           size: 32,
@@ -133,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Accelerate",
+                                "Gyroscope",
                                 style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w700,
@@ -147,25 +151,25 @@ class _HomeScreenState extends State<HomeScreen>
                                     Text(
                                       'x: ${_imuData.accX.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       'y: ${_imuData.accY.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       'z: ${_imuData.accZ.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
@@ -189,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Gyroscope",
+                                "Accelerate",
                                 style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w700,
@@ -203,25 +207,25 @@ class _HomeScreenState extends State<HomeScreen>
                                     Text(
                                       'x: ${_imuData.gyroX.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       'y: ${_imuData.gyroY.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       'z: ${_imuData.gyroZ.toStringAsFixed(4)}',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color:
                                               _colorScheme!.onPrimaryContainer),
@@ -232,6 +236,56 @@ class _HomeScreenState extends State<HomeScreen>
                             ],
                           ),
                         ),
+                        // In your HomeScreen build method, add this card
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Card(
+                            elevation: 4,
+                            color: _colorScheme!.primaryContainer,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Step Counter',
+                                        style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: _colorScheme!
+                                                .onPrimaryContainer),
+                                      ),
+                                      Icon(
+                                        Icons.directions_walk,
+                                        size: 30,
+                                        color: _colorScheme!.onPrimaryContainer,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    '${_imuData.stepCount}',
+                                    style: TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      color: _colorScheme!.onPrimaryContainer,
+                                    ),
+                                  ),
+                                  Text(
+                                    'steps',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: _colorScheme!.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
                       ],
                     ),
                   ),
