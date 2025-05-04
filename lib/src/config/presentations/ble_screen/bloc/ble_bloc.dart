@@ -24,6 +24,7 @@ class BleBloc extends Bloc<BleEvent, BleAppState> {
     on<ConnectRequested>(_onConnectRequested);
     on<DisconnectRequested>(_onDisconnectRequested);
     on<DataReceived>(_onDataReceived);
+    on<FallDetectionUpdated>(_onFallDetectionUpdated);
     on<BleError>(_onBleError);
     add(BleInit());
   }
@@ -197,6 +198,20 @@ class BleBloc extends Bloc<BleEvent, BleAppState> {
           errorMessage: 'Connection failed: $e', isConnected: false));
     }
   }
+
+  void _onFallDetectionUpdated(FallDetectionUpdated event, Emitter<BleAppState> emit) {
+  if (kDebugMode) {
+    print('BleBloc: Fall detection updated: ${event.detected}');
+  }
+  
+  String message = event.detected ? "No Fall Detected!" : "Fall Detected!";
+  Message newMessage = Message(message, 0); 
+  List<Message> newBuffer = List.from(state.buffer)..add(newMessage);
+  if (newBuffer.length > 50) {
+    newBuffer = newBuffer.sublist(newBuffer.length - 50);
+  }
+  emit(state.copyWith(buffer: newBuffer));
+}
 
   Future<void> _onDisconnectRequested(DisconnectRequested event, Emitter<BleAppState> emit) async {
     if (kDebugMode) {

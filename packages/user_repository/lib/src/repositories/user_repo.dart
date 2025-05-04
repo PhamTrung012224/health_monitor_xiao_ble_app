@@ -1,14 +1,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:user_repository/user_repository.dart';
 
-import '../../user_repository.dart';
+
 
 abstract class UserRepository {
   Stream<User?> get user;
-
+  
+  // Authentication methods
   Future<void> signIn(String email, String password);
 
   Future<MyUser> signUp(MyUser myUser, String password);
 
+  Future<void> logOut();
+
+  // User data methods
   Future<void> setUserData(MyUser user);
 
   Future<MyUser> getUserData(String userId);
@@ -17,5 +22,15 @@ abstract class UserRepository {
 
   Future<void> editUsername(String userId, String newUsername);
 
-  Future<void> logOut();
+
+  // Step tracking methods
+  Future<void> updateStepCount(String userId, int stepCount);
+
+  Future<List<StepEntry>> getStepHistory(String userId);
+
+  Future<int> getTotalSteps(String userId);
+
+  // Future<double> getAverageSteps(String userId);
+
+
 }

@@ -2,9 +2,13 @@ import 'package:capstone_mobile_app/src/config/presentations/authentication_scre
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/authentication_bloc/authentication_state.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_screen.dart';
+import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_up_screen/sign_up_bloc/sign_up_bloc.dart';
+import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_up_screen/sign_up_screen.dart';
 import 'package:capstone_mobile_app/src/config/presentations/ble_screen/ble_screen.dart';
 import 'package:capstone_mobile_app/src/config/presentations/ble_screen/bloc/ble_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/home_screen/home_screen.dart';
+import 'package:capstone_mobile_app/src/config/presentations/step_historical_screen/step_historical_screen.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +27,9 @@ void main() async {
     projectId: 'health-care-app-ac9f4',
     storageBucket: 'health-care-app-ac9f4.firebasestorage.app',
   ));
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.playIntegrity
+  );
   runApp(MyApp(FirebaseUserRepository()));
 }
 
@@ -53,6 +60,8 @@ class MyApp extends StatelessWidget {
                     context.read<AuthenticationBloc>().userRepository),
           ),
           BlocProvider<BleBloc>(create: (context) => BleBloc()),
+          BlocProvider<SignUpBloc>(
+              create: (context) => SignUpBloc(userRepository: userRepository)),
           // BlocProvider<UpdateUserProfileBloc>(
           //   create: (context) => UpdateUserProfileBloc(
           //       userRepository:
@@ -69,7 +78,6 @@ class MyApp extends StatelessWidget {
         child: MaterialApp.router(
           title: 'Capstone Mobile App',
           theme: materialTheme.light(),
-          darkTheme: materialTheme.dark(),
           routerConfig: _router,
         ),
       ),
@@ -93,14 +101,22 @@ final GoRouter _router = GoRouter(
       },
     ),
     GoRoute(
-      path: '/home',
+      path: '/signup',
       builder: (BuildContext context, GoRouterState state) {
-        return const HomeScreen(title: "Welcome Trung");
+        return const SignUpScreen();
+      },
+    ),
+    GoRoute(
+      path: '/pedometer',
+      builder: (BuildContext context, GoRouterState state) {
+        return const StepHistoricalScreen();
       },
     ),
     GoRoute(
       path: '/ble',
-      builder: (context, state) => const BleScreen(),
+      builder: (BuildContext context, GoRouterState state) {
+        return const BleScreen();
+      },
     ),
     GoRoute(
       path: '/select_device',

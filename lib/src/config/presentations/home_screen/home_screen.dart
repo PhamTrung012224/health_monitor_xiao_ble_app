@@ -1,19 +1,17 @@
 import 'dart:async';
 
+import 'package:capstone_mobile_app/src/config/components/step_count_card.dart';
 import 'package:capstone_mobile_app/src/config/components/ui_icon.dart';
+import 'package:capstone_mobile_app/src/config/constants/constants.dart';
 import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
+import 'package:capstone_mobile_app/src/config/models/services/fall_alert_service.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_bloc.dart';
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_event.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-
-import '../../constants/constants.dart';
-import '../ble_screen/ble_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -39,11 +37,15 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _context = context;
     _setupDataSubscription();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent // Set the navigation bar color to transparent
+    ));
   }
 
   @override
   void didChangeDependencies() {
     // isDarkMode = (Theme.of(context).brightness == Brightness.dark);
+
     _colorScheme = Theme.of(context).colorScheme;
     super.didChangeDependencies();
   }
@@ -71,260 +73,204 @@ class _HomeScreenState extends State<HomeScreen>
           width: double.infinity,
           color: _colorScheme!.background,
         ),
-        SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                toolbarHeight: 70,
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
+        CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              toolbarHeight: 70,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      context.go('/ble');
+                    },
+                    child:  const UIIcon(
+                        size: 32,
+                        icon: IconConstants.bluetoothIcon,
+                        color: Colors.white),
+                  ),
+                  GestureDetector(
                       onTap: () async {
-                        context.go('/ble');
+                        setState(() {
+                          _isLoadingLogOut = true;
+                        });
+                        _context!.read<SignInBloc>().add(SignOutRequired());
+                        setState(() {
+                          _isLoadingLogOut = false;
+                        });
                       },
-                      child: const UIIcon(
+                      child:const UIIcon(
                           size: 32,
-                          icon: IconConstants.bluetoothIcon,
-                          color: Colors.black),
-                    ),
-                    GestureDetector(
-                        onTap: () async {
-                          setState(() {
-                            _isLoadingLogOut = true;
-                          });
-                          _context!.read<SignInBloc>().add(SignOutRequired());
-                          setState(() {
-                            _isLoadingLogOut = false;
-                          });
-                        },
-                        child: const UIIcon(
-                            size: 32,
-                            icon: IconConstants.logoutIcon,
-                            color: Colors.black)),
-                  ],
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(24),
-                  child: Center(
-                      child: Text(
-                    "IMU Data Dashboard",
-                    style: TextStyleConstants.tabBarTitle,
-                  )),
-                ),
-                pinned: true,
-                backgroundColor: _colorScheme!.tertiaryContainer,
-                expandedHeight: MediaQuery.of(context).size.height * 0.24,
-                flexibleSpace: const FlexibleSpaceBar(),
+                          icon: IconConstants.logoutIcon,
+                          color: Colors.white)),
+                ],
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          height: MediaQuery.of(context).size.height * 0.18,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(16)),
-                              color: _colorScheme!.primaryContainer),
-                          margin: const EdgeInsets.symmetric(vertical: 16.0),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(24),
+                child: Center(
+                    child: Text(
+                  "IMU Data Dashboard",
+                  style: TextStyleConstants.tabBarTitle,
+                )),
+              ),
+              pinned: true,
+              backgroundColor: _colorScheme!.tertiaryContainer,
+              expandedHeight: MediaQuery.of(context).size.height * 0.24,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Image.asset(
+                  "assets/images/background.jpg",
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      const StepCountCard(),
+                      Card(
+                        elevation: 4,
+                        margin: const EdgeInsets.all(16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Gyroscope",
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: _colorScheme!.onPrimaryContainer),
-                              ),
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'x: ${_imuData.accX.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'y: ${_imuData.accY.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'z: ${_imuData.accZ.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          height: MediaQuery.of(context).size.height * 0.18,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(16)),
-                              color: _colorScheme!.primaryContainer),
-                          margin: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Accelerate",
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: _colorScheme!.onPrimaryContainer),
-                              ),
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'x: ${_imuData.gyroX.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'y: ${_imuData.gyroY.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'z: ${_imuData.gyroZ.toStringAsFixed(4)}',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              _colorScheme!.onPrimaryContainer),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        // In your HomeScreen build method, add this card
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Card(
-                            elevation: 4,
-                            color: _colorScheme!.primaryContainer,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
+                              const Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Step Counter',
-                                        style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: _colorScheme!
-                                                .onPrimaryContainer),
-                                      ),
-                                      Icon(
-                                        Icons.directions_walk,
-                                        size: 30,
-                                        color: _colorScheme!.onPrimaryContainer,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
                                   Text(
-                                    '${_imuData.stepCount}',
+                                    'Fall Detection',
                                     style: TextStyle(
-                                      fontSize: 36,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
-                                      color: _colorScheme!.onPrimaryContainer,
                                     ),
                                   ),
-                                  Text(
-                                    'steps',
-                                    style: TextStyle(
+                                  UIIcon(
+                                    size: 32,
+                                    icon: IconConstants.fallingIcon,
+                                    color: Color(0xFF015164),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Center(
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: _imuData.fallDetected
+                                        ? Colors.red
+                                        : Colors.green,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _imuData.fallDetected
+                                        ? 'Fall Detected!'
+                                        : 'No Fall Detected',
+                                    style: const TextStyle(
                                       fontSize: 16,
-                                      color: _colorScheme!.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Last monitored: ${DateTime.now().hour}:${DateTime.now().minute}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
+                            ],
                           ),
-                        )
-                      ],
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Direct use of ListView with shrinkWrap
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 10,
-                          padding: EdgeInsets.zero,
-                          // Constrain the ListView within the column
-                          itemBuilder: (context, idx) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(16)),
-                                  color: _colorScheme!.primaryContainer),
-                              height: MediaQuery.of(context).size.height * 0.18,
-                              margin:
-                                  const EdgeInsets.symmetric(vertical: 16.0),
-                            );
-                          },
+            ),
+          ],
+        ),
+        StreamBuilder<bool>(
+          stream: FallAlertService().alertStatusStream,
+          initialData: FallAlertService().isAlertActive,
+          builder: (context, snapshot) {
+            final isAlertActive = snapshot.data ?? false;
+
+            return isAlertActive
+                ? Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        color: Colors.red.shade800,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'FALL DETECTED',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Are you okay? Emergency contacts will be notified soon.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                FallAlertService().cancelAlert();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 50),
+                              ),
+                              child: const Text(
+                                'I\'M OKAY - CANCEL ALERT',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              )
-            ],
-          ),
+                  )
+                : const SizedBox.shrink();
+          },
         ),
         _isLoadingLogOut
             ? Center(

@@ -19,7 +19,7 @@ class BleScreen extends StatelessWidget {
             title: const Text('BLE Communication'),
             backgroundColor: const Color(0xFF015164),
             leading: GestureDetector(
-              onTap: () => context.go('/home'),
+              onTap: () => context.go('/'),
               child: const Icon(Icons.arrow_back),
             ),
           ),

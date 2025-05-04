@@ -10,6 +10,7 @@ class TextStyleConstants {
   static final TextStyle tabBarTitle = TextStyle(
       fontFamily: GoogleFonts.poppins().fontFamily,
       fontWeight: FontWeight.w700,
+      color: Colors.white,
       fontSize: 24);
 
   static final TextStyle title = TextStyle(
@@ -109,6 +110,7 @@ class IconConstants {
   static const String upIcon = 'assets/icons/expand_circle_up.svg';
   static const String downIcon = 'assets/icons/expand_circle_down.svg';
   static const String themeIcon = 'assets/icons/theme.svg';
+  static const String fallingIcon = 'assets/icons/falling.svg';
 
   //Icon Data
   static const IconData iconPassword = Icons.lock_outline;

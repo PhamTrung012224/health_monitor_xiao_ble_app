@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:capstone_mobile_app/src/config/models/services/fall_alert_service.dart';
+import 'package:user_repository/user_repository.dart';
 
 class BleService {
   BluetoothDevice? _connectedDevice;
   StreamSubscription<List<int>>? _imuCharacteristicSubscription;
   StreamSubscription<List<int>>? _stepCountCharacteristicSubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
+  bool _wasFallDetected = false;
+  static const String FALL_RESET_CHARACTERISTIC_UUID =
+      "00001525-1212-efde-1523-785feabcd123";
 
   // Stream for IMU data
   final StreamController<List<double>> _dataStreamController =
@@ -31,14 +37,11 @@ class BleService {
 
   Future<void> connectToDevice(BluetoothDevice device) async {
     try {
-      // Cancel any existing connection subscriptions
       await _connectionStateSubscription?.cancel();
 
-      // Connect to device
       await device.connect();
       _connectedDevice = device;
 
-      // Set up connection state listener
       _connectionStateSubscription = device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
           if (kDebugMode) {
@@ -54,6 +57,67 @@ class BleService {
         print('Error connecting to device: $e');
       }
       throw e;
+    }
+  }
+
+  Future<bool> writeFallResetValue() async {
+    if (_connectedDevice == null) {
+      if (kDebugMode) {
+        print("Cannot write fall reset: No device connected");
+      }
+      return false;
+    }
+
+    try {
+      // Discover services again to get latest characteristics
+      List<BluetoothService> services =
+          await _connectedDevice!.discoverServices();
+
+      // Find the fall reset characteristic
+      BluetoothCharacteristic? fallResetCharacteristic;
+
+      for (var service in services) {
+        for (var characteristic in service.characteristics) {
+          if (characteristic.uuid.toString().toLowerCase() ==
+              FALL_RESET_CHARACTERISTIC_UUID.toLowerCase()) {
+            fallResetCharacteristic = characteristic;
+            break;
+          }
+        }
+        if (fallResetCharacteristic != null) break;
+      }
+
+      // If characteristic found, write to it
+      if (fallResetCharacteristic != null) {
+        if (kDebugMode) {
+          print("Writing value 1 to fall reset characteristic");
+        }
+
+        // Create a byte array with the value 1
+        List<int> value = [1];
+
+        // Write to the characteristic
+        bool withoutResponse =
+            fallResetCharacteristic.properties.writeWithoutResponse;
+        await fallResetCharacteristic.write(value,
+            withoutResponse: withoutResponse);
+
+        if (kDebugMode) {
+          print("Successfully wrote value 1 to fall reset characteristic");
+        }
+        return true;
+      } else {
+        if (kDebugMode) {
+          print(
+              "Fall reset characteristic not found: $FALL_RESET_CHARACTERISTIC_UUID");
+        }
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error writing to fall reset characteristic: $e");
+      }
+      return false;
     }
   }
 
@@ -189,25 +253,49 @@ class BleService {
     // Subscribe to notifications
     _stepCountCharacteristicSubscription =
         characteristic.onValueReceived.listen((value) {
-      if (value.length >= 4) {
-        // Assuming int32 (4 bytes) for step count
-        ByteData byteData = ByteData(4);
+      if (value.length >= 8) {
+        // Now we expect 8 bytes (2 uint32_t values)
+        // Parse step count (first 4 bytes)
+        ByteData stepByteData = ByteData(4);
         for (int j = 0; j < 4; j++) {
-          byteData.setUint8(j, value[j]);
+          stepByteData.setUint8(j, value[j]);
         }
-        int stepCount = byteData.getInt32(0, Endian.little);
+        int stepCount = stepByteData.getInt32(0, Endian.little);
+
+        // Parse fall detection (next 4 bytes)
+        ByteData fallByteData = ByteData(4);
+        for (int j = 0; j < 4; j++) {
+          fallByteData.setUint8(j, value[j + 4]);
+        }
+        int fallDetected = fallByteData.getInt32(0, Endian.little);
+        bool isFallDetected = fallDetected > 0;
+
+        // Handle fall detection event
+        _handleFallDetection(isFallDetected);
 
         if (kDebugMode) {
-          print("Received step count: $stepCount");
+          print(
+              "Received step count: $stepCount, Fall detected: $isFallDetected");
         }
 
-        // Update step count in BleDataService
+        // Update step count and fall detection in BleDataService
         BleDataService().updateStepCount(stepCount);
+        BleDataService().updateFallDetection(isFallDetected);
 
-        // Add to stream
+        // Add step count to stream
         _stepCountStreamController.add(stepCount);
       }
     });
+  }
+
+  void _handleFallDetection(bool isFallDetected) {
+    // Only trigger alert on rising edge (false -> true transition)
+    if (isFallDetected && !_wasFallDetected) {
+      FallAlertService().triggerFallAlert();
+    }
+
+    // Update state
+    _wasFallDetected = isFallDetected;
   }
 
   void _cleanupConnection() {
@@ -220,14 +308,35 @@ class BleService {
     _connectionStateSubscription = null;
   }
 
+// Add this method to your BleService class
+
   Future<void> disconnectDevice() async {
     if (_connectedDevice != null) {
       try {
-        // Only disconnect if specifically requested
+        // Save step count when disconnecting
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          final stepCount = BleDataService().imuData.stepCount;
+          if (stepCount > 0) {
+            try {
+              final userRepository = FirebaseUserRepository();
+              await userRepository.updateStepCount(currentUser.uid, stepCount);
+              if (kDebugMode) {
+                print('Steps saved on disconnect: $stepCount');
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('Error saving steps on disconnect: $e');
+              }
+            }
+          }
+        }
+
+        // Disconnect from device
         await _connectedDevice!.disconnect();
       } catch (e) {
         if (kDebugMode) {
-          print("Error disconnecting device: $e");
+          print("Error disconnecting: $e");
         }
       } finally {
         _cleanupConnection();

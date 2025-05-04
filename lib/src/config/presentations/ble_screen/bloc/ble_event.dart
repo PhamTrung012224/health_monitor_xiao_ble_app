@@ -53,9 +53,18 @@ class BleError extends BleEvent {
   List<Object?> get props => [message];
 }
 
-class AdapterStateChanged extends BleEvent{
+class AdapterStateChanged extends BleEvent {
   final BluetoothAdapterState state;
   const AdapterStateChanged(this.state);
   @override
   List<Object?> get props => [state];
+}
+
+class FallDetectionUpdated extends BleEvent {
+  final bool detected;
+
+  const FallDetectionUpdated(this.detected);
+
+  @override
+  List<Object?> get props => [detected];
 }

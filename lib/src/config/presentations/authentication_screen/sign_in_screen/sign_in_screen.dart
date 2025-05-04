@@ -3,6 +3,7 @@ import 'package:capstone_mobile_app/src/config/presentations/authentication_scre
 import 'package:capstone_mobile_app/src/config/presentations/authentication_screen/sign_in_screen/sign_in_bloc/sign_in_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
@@ -29,8 +30,6 @@ class _SignInScreenState extends State<SignInScreen> {
   bool obscurePassword = true;
   String? errorMessage;
 
-  // sign user in method
-  void signUserIn() {}
 
   @override
   Widget build(BuildContext context) {
@@ -75,15 +74,15 @@ class _SignInScreenState extends State<SignInScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 48),
-
+          
                 // logo
                 const Icon(
                   Icons.lock,
                   size: 100,
                 ),
-
+          
                 const SizedBox(height: 48),
-
+          
                 // welcome back, you've been missed!
                 Text(
                   'Welcome back you\'ve been missed!',
@@ -92,9 +91,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     fontSize: 16,
                   ),
                 ),
-
+          
                 const SizedBox(height: 24),
-
+          
                 // username text field
                 Form(
                     key: _formKey,
@@ -170,24 +169,8 @@ class _SignInScreenState extends State<SignInScreen> {
                               Theme.of(context).colorScheme.onSurface,
                         ),
 
-                        const UISpace(height: 10),
-
-                        // forgot password?
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Forgot Password?',
-                                style: TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const UISpace(height: 25),
-
+                        const UISpace(height: 40),
+          
                         (!signInRequired)
                             ? GestureDetector(
                                 onTap: () {
@@ -230,9 +213,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                       ],
                     )),
-
+          
                 const SizedBox(height: 48),
-
+          
                 // or continue with
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 25.0),
@@ -257,33 +240,27 @@ class _SignInScreenState extends State<SignInScreen> {
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 48),
-
-                // google sign in buttons
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // google button
-                    SquareTile(imagePath: 'assets/images/google.png'),
-                  ],
-                ),
-
-                const SizedBox(height: 48),
-
+          
+                UISpace(height: MediaQuery.of(context).size.height*0.18),
+          
                 // not a member? register now
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       'Not a member?',
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      'Register now',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: (){
+                        context.go("/signup");
+                      },
+                      child: const Text(
+                        'Register now',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
