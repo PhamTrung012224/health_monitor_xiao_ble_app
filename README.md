@@ -67,10 +67,17 @@ packages/
 - Manages alert escalation and cancellation
 
 ## 📱 Screens
-<img src="screens_image\signin.jpg" width="200" height="400">
-<img src="screens_image\signup.jpg" width="200" height="400">
-<img src="screens_image\home.jpg" width="200" height="400">
-<img src="screens_image\home_alert.jpg" width="200" height="400">
-<img src="screens_image/received_data.jpg" width="200" height="400">
-<img src="screens_image\select_devices.jpg" width="200" height="400">
-<img src="screens_image\step_historical.jpg" width="200" height="400">
+
+<p>
+<img src="screens_image/signin.jpg" width="200" height="400"/>
+<img src="screens_image/signup.jpg" width="200" height="400"/>
+<img src="screens_image/home.jpg" width="200" height="400"/>
+<img src="screens_image/home_alert.jpg" width="200" height="400"/>
+</p>
+
+<!-- Second row: 3 images -->
+<p>
+<img src="screens_image/received_data.jpg" width="200" height="400"/>
+<img src="screens_image/select_devices.jpg" width="200" height="400"/>
+<img src="screens_image/step_historical.jpg" width="200" height="400"/>
+</p>
