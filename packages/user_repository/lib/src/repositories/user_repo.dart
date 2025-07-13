@@ -24,13 +24,13 @@ abstract class UserRepository {
 
 
   // Step tracking methods
-  Future<void> updateStepCount(String userId, int stepCount);
-
   Future<List<StepEntry>> getStepHistory(String userId);
 
   Future<int> getTotalSteps(String userId);
 
-  // Future<double> getAverageSteps(String userId);
+  Future<void> updateStepCount(String userId, int stepCount, bool addToExisting);
+
+  Future<void> updateStepGoal(String userId, int stepGoal);
 
 
 }

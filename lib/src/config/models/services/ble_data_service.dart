@@ -85,7 +85,24 @@ class BleDataService {
     _notifyListeners();
   }
 
+  void resetFallDetection() {
+    if (imuData.fallDetected) {
+      imuData.fallDetected = false;
+      if (kDebugMode) {
+        print("BleDataService resetting fall detection");
+      }
+      _notifyListeners();
+    }
+  }
 
+  void resetStepCount() {
+    // Reset step count while preserving other data
+    imuData.stepCount = 0;
+    if (kDebugMode) {
+      print("BleDataService: Step count reset to 0");
+    }
+    _notifyListeners();
+  }
 
   void _notifyListeners() {
     if (!_imuDataController.isClosed) {

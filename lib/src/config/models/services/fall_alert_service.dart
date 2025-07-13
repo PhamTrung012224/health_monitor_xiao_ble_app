@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:capstone_mobile_app/src/config/models/services/ble_data_service.dart';
 import 'package:capstone_mobile_app/src/config/models/services/ble_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -183,6 +184,8 @@ class FallAlertService {
 
     // Write value 1 to fall reset characteristic
     bool writeSuccess = await BleService().writeFallResetValue();
+
+    BleDataService().resetFallDetection();
 
     if (kDebugMode) {
       if (writeSuccess) {

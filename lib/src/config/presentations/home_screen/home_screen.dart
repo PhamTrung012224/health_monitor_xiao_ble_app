@@ -38,8 +38,9 @@ class _HomeScreenState extends State<HomeScreen>
     _context = context;
     _setupDataSubscription();
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.transparent // Set the navigation bar color to transparent
-    ));
+        systemNavigationBarColor:
+            Colors.transparent // Set the navigation bar color to transparent
+        ));
   }
 
   @override
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen>
                     onTap: () async {
                       context.go('/ble');
                     },
-                    child:  const UIIcon(
+                    child: const UIIcon(
                         size: 32,
                         icon: IconConstants.bluetoothIcon,
                         color: Colors.white),
@@ -99,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
                           _isLoadingLogOut = false;
                         });
                       },
-                      child:const UIIcon(
+                      child: const UIIcon(
                           size: 32,
                           icon: IconConstants.logoutIcon,
                           color: Colors.white)),
@@ -239,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Are you okay? Emergency contacts will be notified soon.',
+                              'Are you okay?',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

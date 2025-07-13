@@ -7,6 +7,7 @@ class MyUserEntity extends Equatable {
   final String name;
   final String picture;
   final List<StepEntryEntity> stepHistory;
+  final int stepGoal;
 
   const MyUserEntity({
     required this.userId,
@@ -14,6 +15,7 @@ class MyUserEntity extends Equatable {
     required this.name,
     required this.picture,
     this.stepHistory = const [],
+    this.stepGoal=10000,
   });
 
   Map<String, Object?> toDocuments() {
@@ -23,6 +25,7 @@ class MyUserEntity extends Equatable {
       'name': name, 
       'picture': picture,
       'stepHistory': stepHistory.map((entry) => entry.toDocument()).toList(),
+      'stepGoal':stepGoal,
     };
   }
 
@@ -40,9 +43,10 @@ class MyUserEntity extends Equatable {
       name: doc['name'],
       picture: doc['picture'],
       stepHistory: stepHistory,
+      stepGoal: doc['stepGoal'] ?? 10000,
     );
   }
 
   @override
-  List<Object?> get props => [userId, email, name, picture, stepHistory];
+  List<Object?> get props => [userId, email, name, picture, stepHistory,stepGoal];
 }

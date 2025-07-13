@@ -106,49 +106,6 @@ class FirebaseUserRepository implements UserRepository {
   }
 
   @override
-  Future<void> updateStepCount(String userId, int stepCount) async {
-    try {
-      final userDocRef = _firestore.collection('users').doc(userId);
-
-      final userDoc = await userDocRef.get();
-      if (!userDoc.exists) {
-        throw Exception('User document not found');
-      }
-
-      final userEntity =
-          MyUserEntity.fromDocument(userDoc.data() as Map<String, dynamic>);
-
-      final user = MyUser.fromEntity(userEntity);
-
-      final today = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-
-      final existingEntry = user.stepHistory.firstWhere(
-        (entry) =>
-            entry.date.year == today.year &&
-            entry.date.month == today.month &&
-            entry.date.day == today.day,
-        orElse: () => StepEntry(date: today, steps: 0),
-      );
-
-      final newStepCount = existingEntry.steps + stepCount;
-
-      final updatedUser = user.addStepEntry(today, newStepCount);
-
-      await userDocRef.update({
-        'stepHistory': updatedUser.stepHistory
-            .map((entry) => entry.toEntity().toDocument())
-            .toList(),
-      });
-
-      log('Updated step count for $userId: now $newStepCount steps');
-    } catch (e) {
-      log('Error updating step count: $e');
-      rethrow;
-    }
-  }
-
-  @override
   Future<List<StepEntry>> getStepHistory(String userId) async {
     try {
       final userDoc = await _firestore.collection('users').doc(userId).get();
@@ -183,23 +140,135 @@ class FirebaseUserRepository implements UserRepository {
     }
   }
 
-//   @override
-//   Future<double> getAverageSteps(String userId) async {
-//     try {
-//       final history = await getStepHistory(userId);
-//       if (history.isEmpty) {
-//         return 0;
-//       }
+  @override
+  Future<void> updateStepGoal(String userId, int stepGoal) async {
+    try {
+      // First, update the user's default goal
+      await _firestore.collection('users').doc(userId).update({
+        'stepGoal': stepGoal,
+      });
 
-//       int totalSteps = 0;
-//       for (var entry in history) {
-//         totalSteps += entry.steps;
-//       }
+      // Also update today's entry with the new goal
+      final today = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final todayStr = today.toIso8601String();
 
-//       return totalSteps / history.length;
-//     } catch (e) {
-//       log('Error calculating average steps: $e');
-//       rethrow;
-//     }
-//   }
+      // Get current user data
+      final userData = await _firestore.collection('users').doc(userId).get();
+      final userEntity =
+          MyUserEntity.fromDocument(userData.data() as Map<String, dynamic>);
+      final user = MyUser.fromEntity(userEntity);
+
+      // Find today's entry
+      final existingEntryIndex = user.stepHistory.indexWhere((entry) =>
+          entry.date.year == today.year &&
+          entry.date.month == today.month &&
+          entry.date.day == today.day);
+
+      if (existingEntryIndex >= 0) {
+        // If today's entry exists, update it with the new goal
+        final existingEntry = user.stepHistory[existingEntryIndex];
+        final updatedEntry = StepEntry(
+          date: existingEntry.date,
+          steps: existingEntry.steps,
+          goal: stepGoal,
+        );
+
+        final updatedHistory = List<StepEntry>.from(user.stepHistory);
+        updatedHistory[existingEntryIndex] = updatedEntry;
+
+        await _firestore.collection('users').doc(userId).update({
+          'stepHistory': updatedHistory
+              .map((entry) => entry.toEntity().toDocument())
+              .toList(),
+        });
+      } else {
+        // If no entry for today, create one with 0 steps and the new goal
+        final newEntry = StepEntry(
+          date: today,
+          steps: 0,
+          goal: stepGoal,
+        );
+
+        final updatedHistory = List<StepEntry>.from(user.stepHistory)
+          ..add(newEntry);
+
+        await _firestore.collection('users').doc(userId).update({
+          'stepHistory': updatedHistory
+              .map((entry) => entry.toEntity().toDocument())
+              .toList(),
+        });
+      }
+
+      log('Updated step goal for $userId to $stepGoal');
+    } catch (e) {
+      log('Error updating step goal: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateStepCount(String userId, int stepCount, bool addToExisting) async {
+    try {
+      final userDocRef = _firestore.collection('users').doc(userId);
+
+      final userDoc = await userDocRef.get();
+      if (!userDoc.exists) {
+        throw Exception('User document not found');
+      }
+
+      final userEntity =
+      MyUserEntity.fromDocument(userDoc.data() as Map<String, dynamic>);
+
+      final user = MyUser.fromEntity(userEntity);
+      final currentGoal = user.stepGoal; // Get user's current goal
+
+      final today = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
+      final existingEntry = user.stepHistory.firstWhere(
+            (entry) =>
+        entry.date.year == today.year &&
+            entry.date.month == today.month &&
+            entry.date.day == today.day,
+        orElse: () => StepEntry(date: today, steps: 0, goal: currentGoal),
+      );
+
+      final newStepCount = addToExisting
+          ? existingEntry.steps + stepCount
+          : stepCount;
+
+      // Create a new entry with the current goal
+      final updatedEntry = StepEntry(
+        date: today,
+        steps: newStepCount,
+        goal: existingEntry.goal != 10000 ? existingEntry.goal : currentGoal, // Keep existing goal if set, otherwise use current
+      );
+
+      // Find index of today's entry to update or add it
+      final index = user.stepHistory.indexWhere((entry) =>
+      entry.date.year == today.year &&
+          entry.date.month == today.month &&
+          entry.date.day == today.day);
+
+      final updatedHistory = List<StepEntry>.from(user.stepHistory);
+      if (index >= 0) {
+        updatedHistory[index] = updatedEntry;
+      } else {
+        updatedHistory.add(updatedEntry);
+      }
+
+      // Update Firebase
+      await userDocRef.update({
+        'stepHistory': updatedHistory
+            .map((entry) => entry.toEntity().toDocument())
+            .toList(),
+      });
+
+      log('Updated step count for $userId: now $newStepCount steps');
+    } catch (e) {
+      log('Error updating step count: $e');
+      rethrow;
+    }
+  }
 }

@@ -320,7 +320,7 @@ class BleService {
           if (stepCount > 0) {
             try {
               final userRepository = FirebaseUserRepository();
-              await userRepository.updateStepCount(currentUser.uid, stepCount);
+              await userRepository.updateStepCount(currentUser.uid, stepCount,true);
               if (kDebugMode) {
                 print('Steps saved on disconnect: $stepCount');
               }
@@ -331,6 +331,9 @@ class BleService {
             }
           }
         }
+
+      //Reset the data in BleDataService
+      BleDataService().resetStepCount();
 
         // Disconnect from device
         await _connectedDevice!.disconnect();

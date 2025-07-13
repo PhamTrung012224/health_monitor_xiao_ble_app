@@ -54,7 +54,7 @@ class _StepCountCardState extends State<StepCountCard> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && _stepCount > 0) {
-        await _userRepository.updateStepCount(currentUser.uid, _stepCount);
+        await _userRepository.updateStepCount(currentUser.uid, _stepCount,false);
         if (kDebugMode) {
           print('Steps saved: $_stepCount');
         }

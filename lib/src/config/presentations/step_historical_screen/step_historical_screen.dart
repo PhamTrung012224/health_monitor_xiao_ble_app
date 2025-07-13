@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -17,11 +18,19 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
   List<StepEntry> _stepHistory = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  int _stepGoal = 10000; // Default step goal
+  final _goalController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _goalController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -40,13 +49,16 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
         return;
       }
 
+      // Load user data to get step goal
+      final userData = await _userRepository.getUserData(currentUser.uid);
+
       // Load step history
       final stepHistory = await _userRepository.getStepHistory(currentUser.uid);
-
       stepHistory.sort((a, b) => b.date.compareTo(a.date));
 
       setState(() {
         _stepHistory = stepHistory;
+        _stepGoal = userData.stepGoal;
         _isLoading = false;
       });
     } catch (e) {
@@ -55,6 +67,50 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
         _errorMessage = 'Error loading step history: $e';
       });
     }
+  }
+
+  void _showGoalSettingDialog() {
+    _goalController.text = _stepGoal.toString();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set Daily Step Goal'),
+        content: TextField(
+          controller: _goalController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Steps',
+            hintText: 'Enter your daily step goal',
+          ),
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Validate and save the new goal
+              final newGoal = int.tryParse(_goalController.text) ?? 10000;
+              if (newGoal > 0) {
+                final currentUser = FirebaseAuth.instance.currentUser;
+                if (currentUser != null) {
+                  await _userRepository.updateStepGoal(
+                      currentUser.uid, newGoal);
+                  setState(() {
+                    _stepGoal = newGoal;
+                  });
+                }
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -169,7 +225,7 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
       orElse: () => StepEntry(date: today, steps: 0),
     );
 
-    final progressPercent = (todayEntry.steps / 10000).clamp(0.0, 1.0);
+    final progressPercent = (todayEntry.steps / _stepGoal).clamp(0.0, 1.0);
 
     return Card(
       elevation: 4,
@@ -180,16 +236,28 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.calendar_today, color: Color(0xFF015164)),
-                SizedBox(width: 8),
-                Text(
-                  'Today',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.calendar_today, color: Color(0xFF015164)),
+                    SizedBox(width: 8),
+                    Text(
+                      'Today',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                // Add goal edit button
+                IconButton(
+                  icon:
+                      const Icon(Icons.edit_outlined, color: Color(0xFF015164)),
+                  onPressed: _showGoalSettingDialog,
+                  tooltip: 'Edit daily step goal',
                 ),
               ],
             ),
@@ -253,7 +321,14 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${10000 - todayEntry.steps} steps to goal',
+                        'Goal: $_stepGoal steps',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${_stepGoal - todayEntry.steps} steps to go',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
@@ -267,19 +342,18 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
     );
   }
 
+  // The rest of your methods remain largely the same, but update references to the goal
   Widget _buildBarChart() {
     // Get last 50 days for chart
     final chartData = _getLast50DaysData();
-
     final maxSteps = _getMaxSteps(chartData);
 
     return BarChart(
       BarChartData(
-        alignment:
-            BarChartAlignment.center, // Change to center for single value
+        alignment: BarChartAlignment.center,
         maxY: maxSteps * 1.2, // Add 20% margin
         minY: 0,
-        groupsSpace: 10,
+        groupsSpace: 8,
         barTouchData: BarTouchData(
           enabled: true,
           touchTooltipData: BarTouchTooltipData(
@@ -307,14 +381,13 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
                   return const SizedBox();
                 }
 
-                // Show date labels for every 5th bar or at start/end
                 if (index % 5 == 0 ||
                     index == 0 ||
                     index == chartData.length - 1) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Transform.rotate(
-                      angle: -0.5, // Slight angle for better readability
+                      angle: -0.5,
                       child: Text(
                         DateFormat('MM/dd').format(chartData[index].date),
                         style: const TextStyle(fontSize: 10),
@@ -330,7 +403,7 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
-              interval: 2500, // Fixed interval for better readability
+              interval: 2500,
               getTitlesWidget: (value, meta) {
                 return Text(
                   '${value.toInt()}',
@@ -369,15 +442,14 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
               BarChartRodData(
                 toY: steps,
                 color: color,
-                width: chartData.length > 30
-                    ? 6
-                    : 10, // Adjust width based on data points
+                width: chartData.length > 30 ? 6 : 8,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(4),
                 ),
               ),
             ],
+            barsSpace: 4, // Add space between bars
           );
         }),
       ),
@@ -415,7 +487,7 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
           ),
         ),
         subtitle: LinearProgressIndicator(
-          value: (entry.steps / 10000).clamp(0.0, 1.0),
+          value: (entry.steps / _stepGoal).clamp(0.0, 1.0), // Use dynamic goal
           backgroundColor: Colors.grey[200],
           valueColor:
               AlwaysStoppedAnimation<Color>(_getColorForSteps(entry.steps)),
@@ -464,10 +536,10 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
   }
 
   double _getMaxSteps(List<StepEntry> entries) {
-    if (entries.isEmpty) return 10000;
+    if (entries.isEmpty) return _stepGoal.toDouble(); // Use dynamic goal
     int max = entries.fold(
         0, (prev, entry) => entry.steps > prev ? entry.steps : prev);
-    return max > 0 ? max.toDouble() : 10000;
+    return max > 0 ? max.toDouble() : _stepGoal.toDouble(); // Use dynamic goal
   }
 
   bool _isToday(DateTime date) {
@@ -478,15 +550,16 @@ class _StepHistoricalScreenState extends State<StepHistoricalScreen> {
   }
 
   Color _getColorForSteps(int steps) {
-    if (steps >= 10000) return Colors.green;
-    if (steps >= 7500) return const Color(0xFF015164);
-    if (steps >= 5000) return Colors.orange;
+    double percentage = steps / _stepGoal; // Use dynamic goal
+    if (percentage >= 1.0) return Colors.green;
+    if (percentage >= 0.75) return Color.fromARGB(255, 221, 221, 79);
+    if (percentage >= 0.5) return Colors.orange;
     return Colors.red;
   }
 
   Color _getColorForProgress(double progress) {
     if (progress >= 1.0) return Colors.green;
-    if (progress >= 0.75) return const Color(0xFF015164);
+    if (progress >= 0.75) return Color.fromARGB(255, 221, 221, 79);
     if (progress >= 0.5) return Colors.orange;
     return Colors.red;
   }
